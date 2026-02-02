@@ -1,38 +1,43 @@
-# Reading Focus Tool
+# 📖 Reading Focus Tool
 
 A desktop application that helps improve reading focus by masking non-essential areas of the screen.
 
-## Features
-- Transparent reading area that allows click-through
-- Adjustable opacity and line height
-- Toggle between black and white overlays
-- Show/hide dashed lines
-- Global keyboard shortcuts
-- System theme adaptation
+## ✨ Key Features
 
-## Download
-Get the latest release from the [Releases page](https://github.com/YOUR_USERNAME/YOUR_REPO/releases).
+- 🎯 `Adjustable reading window` - Customize the height of the mouse following zone
+- 🎨 `Black/White theme toggle` - Switch between dark and light overlays with one click
+- 📏 `Dashed guides` - Indicate a clearer reading boundary
+- 🖱️ `Click-through reading window` - Interact with underlying applications seamlessly
+- **And more to explore!**
 
-## Keyboard Shortcuts
-- `Ctrl+Alt+↑/↓` : Adjust opacity
-- `Ctrl+Alt+B` : Toggle black/white
-- `Ctrl+Alt++/-` : Adjust line height
-- `Ctrl+Alt+L` : Toggle dashed lines
-- `Ctrl+Alt+Q` : Quit application
 
-## Development
-```bash
-# Install dependencies
-npm install
+## 🚀 Keyboard shortcuts
 
-# Run in development mode
-npm start
+- `Ctrl + Alt + +/-`	Adjust reading area height
+- `Ctrl + Alt + ↑/↓`	Increase/decrease overlay opacity
+- `Ctrl + Alt + B`	Switch between black/white overlay
+- `Ctrl + Alt + L`	Show/hide dashed boundary lines
+- `Ctrl + Alt + Q`	Quit application	Close the application
 
-# Build for Windows
-npm run build:win
 
-# Build for macOS (requires Mac)
-npm run build:mac
+## ⚙️ Installation Methods
 
-License
-MIT © 2026 OSBR Studio
+1. **Download Installer**
+   - Download the latest release from [Releases](https://github.com/osbrstudio/reading-focus-tool/releases)
+   - Run the installer
+
+2. OR **Run from Source**
+   ```bash
+    # Prerequisites
+    - Node.js 18 or higher
+    - npm 9 or higher
+    - Git
+     
+    # Clone the repository
+     git clone https://github.com/osbrstudio/reading-focus-tool.git
+     
+    # Install dependencies
+     npm install
+     
+     # Start the application
+     npm start
