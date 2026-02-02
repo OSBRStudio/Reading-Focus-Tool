@@ -67,8 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-   
-steps:
+   steps:
     - name: Download Windows artifacts
       uses: actions/download-artifact@v4
       with:
