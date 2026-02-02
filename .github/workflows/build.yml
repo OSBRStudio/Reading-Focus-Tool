@@ -20,14 +20,19 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    - name: Build Windows installer
-      run: npm run build:win-installer
+    - name: Build Windows (both NSIS and Portable)
+      run: |
+        npm run build:win-installer
+        npm run build:win-portable
 
-    - name: Upload Windows installer
+    - name: Upload Windows artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: windows-installer
-        path: dist/*.exe
+        name: windows-builds
+        path: |
+          dist/*.exe
+          dist/*.blockmap
+          dist/*.yml
         retention-days: 5
 
   release:
@@ -44,5 +49,5 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          windows-installer/*.exe
+          windows-builds/*.exe
         generate_release_notes: true

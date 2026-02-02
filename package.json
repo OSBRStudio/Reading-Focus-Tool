@@ -30,11 +30,11 @@
   "!dist",
   "!.git"
   ],
-    "win": {
-      "target": "nsis",
-      "icon": "icon.ico",
-      "publisherName": "OSBR Studio"
-    },
+  "win": {
+    "target": ["nsis", "portable"],
+    "icon": "icon.ico",
+    "publisherName": "OSBR Studio"
+  },
     "mac": {
       "target": "dmg",
       "icon": "icon.icns",
