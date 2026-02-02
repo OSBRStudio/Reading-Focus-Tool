@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading Focus Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: transparent !important;
+        }
+        
+        /* Black overlays for top and bottom - NOT click-through */
+        #black-overlay-top {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 0; /* Set by JavaScript */
+            pointer-events: auto !important; /* NOT click-through */
+            z-index: 10;
+            transition: background-color 0.3s;
+        }
+        
+        #black-overlay-bottom {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0; /* Set by JavaScript */
+            pointer-events: auto !important; /* NOT click-through */
+            z-index: 10;
+            transition: background-color 0.3s;
+        }
+        
+        /* Dashed lines - positioned at edges of black overlays */
+        .dashed-line {
+            position: fixed;
+            left: 0;
+            width: 100%;
+            height: 0;
+            pointer-events: none;
+            z-index: 20;
+            opacity: 0.9;
+        }
+        
+        #dashed-line-top {
+            border-bottom: 2px dashed;
+            top: 0;
+            display: none; /* Hidden by default */
+        }
+        
+        #dashed-line-bottom {
+            border-top: 2px dashed;
+            bottom: 0;
+            display: none; /* Hidden by default */
+        }
+        
+        /* Top control bar - NOT click-through */
+        #top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            pointer-events: auto !important;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            color: white;
+            height: 40px;
+            z-index: 1000;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        /* Light theme for top bar */
+        .light-theme #top-bar {
+            background-color: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .light-theme .control-btn {
+            background: rgba(0, 0, 0, 0.1);
+            color: #333;
+        }
+        
+        .light-theme .control-btn:hover {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        .light-theme .close-btn {
+            background: rgba(255, 50, 50, 0.8);
+            color: white;
+        }
+        
+        /* Bottom bar (optional) */
+        #bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            pointer-events: auto !important;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            color: white;
+            height: 30px;
+            z-index: 1000;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .light-theme #bottom-bar {
+            background-color: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Footer sections */
+        .footer-left {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+        
+        .footer-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            font-size: 12px;
+            opacity: 0.9;
+            color: #ccc;
+        }
+        
+        .light-theme .footer-center {
+            color: #666;
+        }
+        
+        .footer-right {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex: 1;
+        }
+        
+        /* Transparent reading area - CLICK-THROUGH */
+        #transparent-area {
+            position: fixed;
+            width: 100%; /* Full width always */
+            height: 60px; /* Height of transparent area */
+            background-color: transparent !important;
+            pointer-events: none !important; /* CLICK THROUGH */
+            transform: translateY(-50%);
+            transition: height 0.2s;
+            z-index: 5;
+            top: 50%;
+        }
+        
+        /* Window controls styling */
+        .window-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 13px;
+            transition: all 0.2s;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            pointer-events: auto !important;
+        }
+        
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .close-btn {
+            background: rgba(255, 50, 50, 0.7);
+        }
+        
+        .close-btn:hover {
+            background: rgba(255, 50, 50, 0.9);
+        }
+        
+        /* Settings panel - NOT click-through - FIXED positioning */
+        .settings-panel {
+            position: fixed;
+            top: 50px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 300px;
+            display: none;
+            z-index: 2000;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            pointer-events: auto !important;
+        }
+        
+        .light-theme .settings-panel {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .slider-container {
+            margin: 15px 0;
+        }
+        
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: #ddd;
+        }
+        
+        .light-theme .slider-label {
+            color: #666;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+            pointer-events: auto !important;
+        }
+        
+        .light-theme input[type="range"] {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4a9eff;
+            cursor: pointer;
+            pointer-events: auto !important;
+        }
+        
+        .status-info {
+            font-size: 12px;
+            opacity: 0.9;
+            color: #ccc;
+        }
+        
+        .light-theme .status-info {
+            color: #666;
+        }
+        
+        /* Draggable area for moving window - NOT click-through */
+        #drag-handle {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: calc(100% - 200px);
+            height: 40px;
+            -webkit-app-region: drag;
+            cursor: move;
+            pointer-events: auto !important;
+        }
+        
+        .app-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        
+        .shortcut-key {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin: 0 2px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .light-theme .shortcut-key {
+            background: rgba(0, 0, 0, 0.1);
+            color: #333;
+        }
+        
+        .settings-section {
+            margin: 15px 0;
+            padding: 10px 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .light-theme .settings-section {
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .color-preview {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            margin-right: 10px;
+            vertical-align: middle;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .light-theme .color-preview {
+            border: 1px solid rgba(0, 0, 0, 0.3);
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+            margin-left: 10px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            transition: .3s;
+            border-radius: 24px;
+            pointer-events: auto !important;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: #4a9eff;
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+        
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 10px 0;
+        }
+        
+        /* Copyright text */
+        .copyright {
+            font-size: 12px;
+            opacity: 0.9;
+            color: #ccc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .light-theme .copyright {
+            color: #666;
+        }
+    </style>
+</head>
+<body class="dark-theme">
+    <!-- Black overlays for top and bottom (NOT click-through) -->
+    <div id="black-overlay-top"></div>
+    <div id="black-overlay-bottom"></div>
+    
+    <!-- Dashed lines at the edges -->
+    <div id="dashed-line-top" class="dashed-line"></div>
+    <div id="dashed-line-bottom" class="dashed-line"></div>
+    
+    <!-- Transparent reading area (CLICK-THROUGH) -->
+    <div id="transparent-area"></div>
+    
+    <!-- Top control bar (NOT click-through) -->
+    <div id="top-bar">
+        <div id="drag-handle"></div>
+        <div class="app-title">📖 Reading Focus Tool</div>
+        <div class="window-controls">
+            <button class="control-btn" onclick="toggleSettings()">⚙️ Settings</button>
+            <button class="control-btn" onclick="minimizeWindow()">🗕</button>
+            <button class="control-btn close-btn" onclick="closeWindow()">✕</button>
+        </div>
+    </div>
+    
+    <!-- Bottom bar (optional) -->
+    <div id="bottom-bar">
+        <div class="footer-left">
+            <div class="status-info" id="status-info">
+                Opacity: 50% | Color: Black | Height: 60px
+            </div>
+        </div>
+        
+        <div class="footer-center">
+            <span class="copyright">© 2026 OSBR Studio</span>
+        </div>
+        
+        <div class="footer-right">
+            <button class="control-btn" onclick="toggleFooter()">Hide Footer</button>
+        </div>
+    </div>
+    
+    <!-- Settings panel (NOT click-through) -->
+    <div id="settings-panel" class="settings-panel">
+        <h3 style="margin-bottom: 15px;">Settings</h3>
+        
+        <div class="slider-container">
+            <label class="slider-label">
+                <span id="color-preview" class="color-preview" style="background: rgba(0,0,0,0.5);"></span>
+                Opacity: <span id="opacity-value">50%</span>
+            </label>
+            <input type="range" id="opacity-slider" min="0" max="100" value="50">
+        </div>
+        
+        <div class="slider-container">
+            <label class="slider-label">
+                Line Height: <span id="height-value">60px</span>
+            </label>
+            <input type="range" id="height-slider" min="20" max="300" value="60">
+        </div>
+        
+        <div class="settings-section">
+            <div class="toggle-label">
+                <span>Show Dashed Lines</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="dashed-lines-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            
+            <div class="toggle-label">
+                <span>Follow System Theme</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="system-theme-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            
+            <button class="control-btn" style="width: 100%; margin-bottom: 8px;" onclick="toggleColor()" id="color-btn">
+                🎨 Switch to White
+            </button>
+            <button class="control-btn" style="width: 100%;" onclick="toggleFooter()" id="footer-btn">
+                📊 Show Footer
+            </button>
+        </div>
+        
+        <div class="settings-section">
+            <div class="status-info">
+                <strong>📋 Quick Shortcuts:</strong><br><br>
+                <span class="shortcut-key">Ctrl</span>+<span class="shortcut-key">Alt</span>+<span class="shortcut-key">↑</span>/<span class="shortcut-key">↓</span> : Opacity<br>
+                <span class="shortcut-key">Ctrl</span>+<span class="shortcut-key">Alt</span>+<span class="shortcut-key">B</span> : Black/White<br>
+                <span class="shortcut-key">Ctrl</span>+<span class="shortcut-key">Alt</span>+<span class="shortcut-key">+</span>/<span class="shortcut-key">-</span> : Height<br>
+                <span class="shortcut-key">Ctrl</span>+<span class="shortcut-key">Alt</span>+<span class="shortcut-key">L</span> : Toggle Lines<br>
+                <span class="shortcut-key">Ctrl</span>+<span class="shortcut-key">Alt</span>+<span class="shortcut-key">Q</span> : Quit
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 15px; font-size: 11px; opacity: 0.7;">
+            Move mouse to position reading area<br>
+            <span style="color: #4a9eff;">Transparent area allows clicking through to other apps</span>
+        </div>
+    </div>
+    
+    <script>
+        const { ipcRenderer } = require('electron')
+        
+        // Current settings
+        let settings = {
+            opacity: 0.5,
+            isBlack: true,
+            lineHeight: 60,
+            showFooter: false,
+            showDashedLines: true,
+            followSystemTheme: true,
+            systemTheme: { shouldUseDarkColors: true }
+        }
+        
+        const transparentArea = document.getElementById('transparent-area')
+        const topOverlay = document.getElementById('black-overlay-top')
+        const bottomOverlay = document.getElementById('black-overlay-bottom')
+        const dashedLineTop = document.getElementById('dashed-line-top')
+        const dashedLineBottom = document.getElementById('dashed-line-bottom')
+        const statusInfo = document.getElementById('status-info')
+        
+        // Click-through control - IMPROVED version
+        let clickThroughEnabled = false // Start disabled for initial interaction
+        let isMouseOverControls = false
+        let clickThroughTimeout = null
+        
+        // Enable click-through for transparent areas only
+        function enableClickThrough() {
+            if (!clickThroughEnabled && !isMouseOverControls) {
+                clickThroughEnabled = true
+                console.log('Enabling click-through')
+                // Make window ignore mouse events (click-through)
+                ipcRenderer.send('set-ignore-mouse-events', true, { 
+                    forward: true 
+                })
+            }
+        }
+        
+        // Disable click-through (for interacting with controls)
+        function disableClickThrough() {
+            if (clickThroughEnabled) {
+                clickThroughEnabled = false
+                console.log('Disabling click-through')
+                ipcRenderer.send('set-ignore-mouse-events', false)
+            }
+        }
+        
+        // Update system theme based on settings
+        function updateSystemTheme() {
+            const body = document.body
+            if (settings.followSystemTheme) {
+                if (settings.systemTheme.shouldUseDarkColors) {
+                    body.classList.remove('light-theme')
+                    body.classList.add('dark-theme')
+                } else {
+                    body.classList.remove('dark-theme')
+                    body.classList.add('light-theme')
+                }
+            } else {
+                // Use default dark theme
+                body.classList.remove('light-theme')
+                body.classList.add('dark-theme')
+            }
+        }
+        
+        // Set up control element event listeners
+        function setupControlListeners() {
+            // Get all control elements
+            const controlElements = document.querySelectorAll(
+                '#top-bar, #top-bar *, #bottom-bar, #bottom-bar *, .settings-panel, .settings-panel *, .control-btn, input, .toggle-slider, #opacity-slider, #height-slider, #dashed-lines-toggle, #system-theme-toggle'
+            )
+            
+            controlElements.forEach(element => {
+                // Skip transparent area and dashed lines
+                if (element.id === 'transparent-area' || 
+                    element.classList.contains('dashed-line') ||
+                    element.id === 'transparent-area') {
+                    return
+                }
+                
+                element.addEventListener('mouseenter', () => {
+                    console.log('Mouse entered control:', element.tagName, element.id || element.className)
+                    isMouseOverControls = true
+                    disableClickThrough()
+                    
+                    // Clear pending timeout
+                    if (clickThroughTimeout) {
+                        clearTimeout(clickThroughTimeout)
+                        clickThroughTimeout = null
+                    }
+                })
+                
+                element.addEventListener('mouseleave', (e) => {
+                    console.log('Mouse left control:', element.tagName, element.id || element.className)
+                    isMouseOverControls = false
+                    
+                    // Delay enabling click-through
+                    clickThroughTimeout = setTimeout(() => {
+                        if (!isMouseOverControls) {
+                            enableClickThrough()
+                        }
+                    }, 100)
+                })
+                
+                // Ensure click events work properly
+                element.addEventListener('mousedown', (e) => {
+                    e.stopPropagation()
+                    console.log('Control mousedown:', element.tagName)
+                })
+                
+                element.addEventListener('click', (e) => {
+                    e.stopPropagation()
+                    console.log('Control clicked:', element.tagName)
+                })
+            })
+            
+            // Black overlays are also control areas
+            [topOverlay, bottomOverlay].forEach(overlay => {
+                overlay.addEventListener('mouseenter', () => {
+                    console.log('Mouse entered overlay')
+                    isMouseOverControls = true
+                    disableClickThrough()
+                    
+                    if (clickThroughTimeout) {
+                        clearTimeout(clickThroughTimeout)
+                        clickThroughTimeout = null
+                    }
+                })
+                
+                overlay.addEventListener('mouseleave', () => {
+                    console.log('Mouse left overlay')
+                    isMouseOverControls = false
+                    
+                    clickThroughTimeout = setTimeout(() => {
+                        if (!isMouseOverControls) {
+                            enableClickThrough()
+                        }
+                    }, 100)
+                })
+            })
+        }
+        
+        // Initialize
+        function initialize() {
+            console.log('Initializing application...')
+            
+            // Make window cover full screen
+            document.body.style.width = window.innerWidth + 'px'
+            document.body.style.height = window.innerHeight + 'px'
+            
+            // Set initial position (considering top bar height)
+            const topBarHeight = 40
+            const initialY = (window.innerHeight / 2) + (topBarHeight / 2)
+            transparentArea.style.top = initialY + 'px'
+            
+            // Make window draggable from top bar
+            const dragHandle = document.getElementById('drag-handle')
+            dragHandle.style['-webkit-app-region'] = 'drag'
+            
+            // Initial update of all elements
+            updateTransparentArea()
+            updateBlackOverlays()
+            updateStatus()
+            updateColorPreview()
+            updateSystemTheme()
+            
+            // Initialize dashed lines toggle
+            initDashedLinesToggle()
+            initSystemThemeToggle()
+            updateDashedLines() // Initial dashed lines update
+            
+            // Set up control element listeners
+            setupControlListeners()
+            
+            // Initially enable click-through after a short delay
+            setTimeout(() => {
+                enableClickThrough()
+                console.log('Initial click-through enabled')
+            }, 1000)
+            
+            console.log('Application initialized successfully')
+        }
+        
+        // Update transparent area position and height
+        function updateTransparentArea() {
+            transparentArea.style.width = '100%'
+            transparentArea.style.left = '0'
+            transparentArea.style.height = settings.lineHeight + 'px'
+        }
+        
+        // Update black overlays (top and bottom)
+        function updateBlackOverlays() {
+            const areaRect = transparentArea.getBoundingClientRect()
+            const topBarHeight = 40
+            
+            // TOP OVERLAY
+            let topHeight = areaRect.top
+            if (topHeight < topBarHeight) {
+                const newTop = topBarHeight + (settings.lineHeight / 2)
+                if (parseFloat(transparentArea.style.top) < newTop) {
+                    transparentArea.style.top = newTop + 'px'
+                }
+                topHeight = Math.max(topBarHeight, areaRect.top)
+            }
+            
+            topOverlay.style.height = Math.max(0, topHeight) + 'px'
+            topOverlay.style.backgroundColor = settings.isBlack 
+                ? `rgba(0, 0, 0, ${settings.opacity})` 
+                : `rgba(255, 255, 255, ${settings.opacity})`
+            
+            // BOTTOM OVERLAY
+            const bottomTop = areaRect.bottom
+            const bottomHeight = window.innerHeight - bottomTop
+            bottomOverlay.style.height = Math.max(0, bottomHeight) + 'px'
+            bottomOverlay.style.top = bottomTop + 'px'
+            bottomOverlay.style.backgroundColor = settings.isBlack 
+                ? `rgba(0, 0, 0, ${settings.opacity})` 
+                : `rgba(255, 255, 255, ${settings.opacity})`
+            
+            // Update dashed lines
+            updateDashedLines()
+        }
+        
+        // Update dashed lines position and visibility - fixed version
+        function updateDashedLines() {
+            if (!transparentArea || !dashedLineTop || !dashedLineBottom) {
+                return
+            }
+            
+            // Get transparent area position
+            const areaRect = transparentArea.getBoundingClientRect()
+            
+            // Update position
+            dashedLineTop.style.top = areaRect.top + 'px'
+            dashedLineBottom.style.top = areaRect.bottom + 'px'
+            
+            // Ensure width
+            dashedLineTop.style.width = '100%'
+            dashedLineBottom.style.width = '100%'
+            
+            // Set color (inverse)
+            const lineColor = settings.isBlack 
+                ? 'rgba(255, 255, 255, 0.7)'
+                : 'rgba(0, 0, 0, 0.7)'
+            
+            dashedLineTop.style.borderBottomColor = lineColor
+            dashedLineBottom.style.borderTopColor = lineColor
+            
+            // Set show/hide - direct control
+            if (settings.showDashedLines) {
+                dashedLineTop.style.display = 'block'
+                dashedLineBottom.style.display = 'block'
+            } else {
+                dashedLineTop.style.display = 'none'
+                dashedLineBottom.style.display = 'none'
+            }
+            
+            console.log('Dashed lines updated. Show:', settings.showDashedLines)
+        }
+        
+        // Initialize dashed lines toggle events
+        function initDashedLinesToggle() {
+            const toggle = document.getElementById('dashed-lines-toggle')
+            if (toggle) {
+                // Set initial state
+                toggle.checked = settings.showDashedLines
+                
+                // Add event listener
+                toggle.addEventListener('change', function(e) {
+                    console.log('Toggle switch changed:', e.target.checked)
+                    settings.showDashedLines = e.target.checked
+                    updateDashedLines()
+                    saveSettings()
+                    ipcRenderer.send('update-settings', { 
+                        showDashedLines: settings.showDashedLines 
+                    })
+                })
+            }
+        }
+        
+        // Initialize system theme toggle
+        function initSystemThemeToggle() {
+            const toggle = document.getElementById('system-theme-toggle')
+            if (toggle) {
+                // Set initial state
+                toggle.checked = settings.followSystemTheme
+                
+                // Add event listener
+                toggle.addEventListener('change', function(e) {
+                    console.log('System theme toggle changed:', e.target.checked)
+                    settings.followSystemTheme = e.target.checked
+                    updateSystemTheme()
+                    saveSettings()
+                    ipcRenderer.send('update-settings', { 
+                        followSystemTheme: settings.followSystemTheme 
+                    })
+                })
+            }
+        }
+        
+        // Update dashed lines toggle display
+        function updateDashedLinesToggle() {
+            const toggle = document.getElementById('dashed-lines-toggle')
+            if (toggle) {
+                toggle.checked = settings.showDashedLines
+            }
+        }
+        
+        // Update status display
+        function updateStatus() {
+            if (statusInfo) {
+                statusInfo.textContent = 
+                    `Opacity: ${Math.round(settings.opacity * 100)}% | ` +
+                    `Color: ${settings.isBlack ? 'Black' : 'White'} | ` +
+                    `Height: ${settings.lineHeight}px`
+            }
+            
+            // Update slider values
+            document.getElementById('opacity-value').textContent = 
+                Math.round(settings.opacity * 100) + '%'
+            document.getElementById('opacity-slider').value = settings.opacity * 100
+            
+            document.getElementById('height-value').textContent = settings.lineHeight + 'px'
+            document.getElementById('height-slider').value = settings.lineHeight
+            
+            // Update color button text
+            document.getElementById('color-btn').textContent = 
+                settings.isBlack ? '🎨 Switch to White' : '🎨 Switch to Black'
+        }
+        
+        // Update color preview
+        function updateColorPreview() {
+            const colorPreview = document.getElementById('color-preview')
+            if (settings.isBlack) {
+                colorPreview.style.backgroundColor = `rgba(0, 0, 0, ${settings.opacity})`
+            } else {
+                colorPreview.style.backgroundColor = `rgba(255, 255, 255, ${settings.opacity})`
+            }
+        }
+        
+        // Mouse controls - move transparent area with mouse
+        let mouseMoveTimeout = null
+        
+        document.addEventListener('mousemove', (e) => {
+            // Throttle: prevent too frequent updates
+            if (mouseMoveTimeout) return
+            
+            mouseMoveTimeout = setTimeout(() => {
+                const topBarHeight = 40
+                // Ensure transparent area doesn't go above top bar
+                const minY = topBarHeight + (settings.lineHeight / 2)
+                const maxY = window.innerHeight - (settings.lineHeight / 2)
+                
+                let newY = e.clientY
+                if (newY < minY) newY = minY
+                if (newY > maxY) newY = maxY
+                
+                transparentArea.style.top = newY + 'px'
+                
+                // Update overlays and dashed lines immediately
+                updateBlackOverlays()
+                
+                mouseMoveTimeout = null
+            }, 10)
+        }, { passive: true })
+        
+        // Allow mouse wheel to pass through (for scrolling underlying content)
+        document.addEventListener('wheel', (e) => {
+            // Let the wheel event pass through to the underlying window
+        }, { passive: true })
+        
+        // Listen for messages from main process
+        ipcRenderer.on('load-settings', (event, savedSettings) => {
+            console.log('Loading saved settings:', savedSettings)
+            settings = { ...settings, ...savedSettings }
+            
+            // Apply loaded settings
+            updateTransparentArea()
+            updateBlackOverlays()
+            updateStatus()
+            updateColorPreview()
+            updateSystemTheme()
+            updateDashedLinesToggle()
+            updateDashedLines() // Update dashed lines after applying settings
+            
+            // Show/hide footer based on settings
+            document.getElementById('bottom-bar').style.display = 
+                settings.showFooter ? 'flex' : 'none'
+            document.getElementById('footer-btn').textContent = 
+                settings.showFooter ? '📊 Hide Footer' : '📊 Show Footer'
+            
+            // Update system theme toggle
+            const systemThemeToggle = document.getElementById('system-theme-toggle')
+            if (systemThemeToggle) {
+                systemThemeToggle.checked = settings.followSystemTheme
+            }
+            
+            console.log('Settings applied successfully')
+        })
+        
+        ipcRenderer.on('adjust-opacity', (event, opacity) => {
+            console.log('Adjusting opacity to:', opacity)
+            settings.opacity = opacity
+            updateBlackOverlays()
+            updateStatus()
+            updateColorPreview()
+            saveSettings()
+        })
+        
+        ipcRenderer.on('toggle-color', (event, isBlack) => {
+            console.log('Toggling color to:', isBlack ? 'Black' : 'White')
+            settings.isBlack = isBlack
+            updateBlackOverlays()
+            updateDashedLines() // Update dashed lines when color changes
+            updateStatus()
+            updateColorPreview()
+            saveSettings()
+        })
+        
+        ipcRenderer.on('adjust-line-height', (event, height) => {
+            console.log('Adjusting line height to:', height)
+            settings.lineHeight = height
+            updateTransparentArea()
+            updateBlackOverlays() // This will automatically update dashed lines
+            updateStatus()
+            saveSettings()
+        })
+        
+        // Dashed lines toggle handling - fixed version
+        ipcRenderer.on('toggle-dashed-lines', (event, showDashedLines) => {
+            console.log('Toggling dashed lines to:', showDashedLines)
+            settings.showDashedLines = showDashedLines
+            
+            // Update toggle state
+            updateDashedLinesToggle()
+            
+            // Immediately update dashed lines display
+            updateDashedLines()
+            
+            // Save settings
+            saveSettings()
+            
+            console.log('Dashed lines toggled successfully')
+        })
+        
+        // System theme change handler
+        ipcRenderer.on('system-theme-changed', (event, systemTheme) => {
+            console.log('System theme changed:', systemTheme)
+            settings.systemTheme = systemTheme
+            
+            if (settings.followSystemTheme) {
+                updateSystemTheme()
+            }
+        })
+        
+        ipcRenderer.on('force-always-on-top', () => {
+            // Keep window always on top
+        })
+        
+        // Window controls
+        function minimizeWindow() {
+            console.log('Minimize button clicked')
+            disableClickThrough()
+            setTimeout(() => {
+                ipcRenderer.send('window-control', 'minimize')
+            }, 10)
+        }
+        
+        function closeWindow() {
+            console.log('Close button clicked')
+            disableClickThrough()
+            setTimeout(() => {
+                ipcRenderer.send('window-control', 'close')
+            }, 10)
+        }
+        
+        // FIXED: Settings toggle function
+        function toggleSettings() {
+            console.log('Settings button clicked')
+            const panel = document.getElementById('settings-panel')
+            
+            if (panel.style.display === 'block') {
+                panel.style.display = 'none'
+                setTimeout(() => {
+                    enableClickThrough()
+                }, 100)
+            } else {
+                panel.style.display = 'block'
+                disableClickThrough()
+            }
+        }
+        
+        function toggleColor() {
+            console.log('Color toggle button clicked')
+            settings.isBlack = !settings.isBlack
+            console.log('Local color toggle to:', settings.isBlack ? 'Black' : 'White')
+            updateBlackOverlays()
+            updateDashedLines()
+            updateStatus()
+            updateColorPreview()
+            saveSettings()
+            ipcRenderer.send('update-settings', { isBlack: settings.isBlack })
+        }
+        
+        function toggleFooter() {
+            console.log('Footer toggle button clicked')
+            settings.showFooter = !settings.showFooter
+            const footer = document.getElementById('bottom-bar')
+            footer.style.display = settings.showFooter ? 'flex' : 'none'
+            document.getElementById('footer-btn').textContent = 
+                settings.showFooter ? '📊 Hide Footer' : '📊 Show Footer'
+            updateStatus()
+            saveSettings()
+            ipcRenderer.send('update-settings', { showFooter: settings.showFooter })
+        }
+        
+        // Slider events
+        document.getElementById('opacity-slider').addEventListener('input', (e) => {
+            settings.opacity = e.target.value / 100
+            updateBlackOverlays()
+            updateStatus()
+            updateColorPreview()
+            saveSettings()
+            ipcRenderer.send('update-settings', { opacity: settings.opacity })
+        })
+        
+        document.getElementById('height-slider').addEventListener('input', (e) => {
+            settings.lineHeight = parseInt(e.target.value)
+            updateTransparentArea()
+            updateBlackOverlays() // This will automatically update dashed lines
+            updateStatus()
+            saveSettings()
+            ipcRenderer.send('update-settings', { lineHeight: settings.lineHeight })
+        })
+        
+        // Save settings to main process
+        function saveSettings() {
+            console.log('Saving settings:', settings)
+            ipcRenderer.send('update-settings', settings)
+        }
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            document.body.style.width = window.innerWidth + 'px'
+            document.body.style.height = window.innerHeight + 'px'
+            updateBlackOverlays()
+            updateDashedLines()
+        })
+        
+        // Initialize when page loads
+        window.addEventListener('DOMContentLoaded', initialize)
+        
+        // FIXED: Close settings when clicking outside
+        document.addEventListener('click', (e) => {
+            const panel = document.getElementById('settings-panel')
+            const settingsBtn = document.querySelector('[onclick="toggleSettings()"]')
+            
+            // Check if click is outside settings panel and not on settings button
+            if (panel.style.display === 'block' && 
+                !panel.contains(e.target) && 
+                e.target !== settingsBtn && 
+                !settingsBtn.contains(e.target)) {
+                console.log('Click outside settings, closing panel')
+                panel.style.display = 'none'
+                setTimeout(() => {
+                    enableClickThrough()
+                }, 100)
+            }
+        })
+        
+        // Close settings with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const panel = document.getElementById('settings-panel')
+                if (panel.style.display === 'block') {
+                    panel.style.display = 'none'
+                    setTimeout(() => {
+                        enableClickThrough()
+                    }, 100)
+                }
+            }
+        })
+        
+        // Force initial update after a short delay
+        setTimeout(() => {
+            updateBlackOverlays()
+            updateDashedLines()
+        }, 100)
+    </script>
+</body>
+</html>

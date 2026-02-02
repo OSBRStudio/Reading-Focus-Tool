@@ -1,0 +1,56 @@
+{
+  "name": "reading-focus-tool",
+  "version": "1.0.0",
+  "description": "A tool to improve reading focus by masking non-essential areas",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "clean": "rmdir /s /q dist 2>nul || echo 'dist folder not found'",
+    "build:win": "npm run clean && electron-builder --win --x64",
+    "build:win-installer": "npm run clean && electron-builder --win nsis --x64",
+    "build:win-portable": "npm run clean && electron-builder --win portable --x64",
+    "build:mac": "npm run clean && electron-builder --mac",
+    "dist": "electron-builder"
+  },
+  "author": "OSBR Studio",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.osbrstudio.readingfocus",
+    "productName": "Reading Focus",
+    "directories": {
+      "output": "dist"
+    },
+"files": [
+  "**/*",
+  "!node_modules",
+  "!dist",
+  "!.git"
+  ],
+    "win": {
+      "target": "nsis",
+      "icon": "icon.ico",
+      "publisherName": "OSBR Studio"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "icon.icns",
+      "category": "public.app-category.productivity"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Reading Focus",
+      "uninstallDisplayName": "Reading Focus",
+      "license": "LICENSE",
+      "menuCategory": "OSBR Studio",
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico"
+    }
+  }
+}
