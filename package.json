@@ -9,7 +9,7 @@
     "build:win": "npm run clean && electron-builder --win --x64",
     "build:win-installer": "npm run clean && electron-builder --win nsis --x64",
     "build:win-portable": "npm run clean && electron-builder --win portable --x64",
-    "build:mac": "npm run clean && electron-builder --mac",
+    "build:mac": "npm run clean && electron-builder --mac --publish never",
     "dist": "electron-builder"
   },
   "author": "OSBR Studio",
