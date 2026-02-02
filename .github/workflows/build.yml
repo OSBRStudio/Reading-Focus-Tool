@@ -35,19 +35,54 @@ jobs:
           dist/*.yml
         retention-days: 5
 
+  build-mac:
+    runs-on: macos-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build Mac DMG
+      run: npm run build:mac
+
+    - name: Upload Mac artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: mac-builds
+        path: |
+          dist/*.dmg
+          dist/*.blockmap
+          dist/*.yml
+        retention-days: 5
+
   release:
-    needs: build-windows
+    needs: [build-windows, build-mac]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     
     steps:
-    - name: Download artifacts
+    - name: Download Windows artifacts
       uses: actions/download-artifact@v4
+      with:
+        name: windows-builds
+
+    - name: Download Mac artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: mac-builds
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          windows-builds/*.exe
+          windows-builds/*
+          mac-builds/*
         generate_release_notes: true
