@@ -66,14 +66,14 @@
             display: none; /* Hidden by default */
         }
         
-        /* Top control bar - NOT click-through */
+        /* Top control bar - FIXED: No dragging, NO click-through */
         #top-bar {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             background-color: rgba(0, 0, 0, 0.8);
-            pointer-events: auto !important;
+            pointer-events: auto !important; /* Entire bar blocks mouse */
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -83,6 +83,7 @@
             z-index: 1000;
             border-bottom: 1px solid rgba(255, 255, 255, 0.2);
             transition: background-color 0.3s, color 0.3s;
+            cursor: default; /* Default cursor, not draggable */
         }
         
         /* Light theme for top bar */
@@ -167,7 +168,7 @@
             background-color: transparent !important;
             pointer-events: none !important; /* CLICK THROUGH */
             transform: translateY(-50%);
-            transition: height 0.2s;
+            transition: height 0.2s ease; /* Smooth height transition */
             z-index: 5;
             top: 50%;
         }
@@ -279,16 +280,12 @@
             color: #666;
         }
         
-        /* Draggable area for moving window - NOT click-through */
-        #drag-handle {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: calc(100% - 200px);
-            height: 40px;
-            -webkit-app-region: drag;
-            cursor: move;
-            pointer-events: auto !important;
+        /* Title area - NOT draggable */
+        #title-area {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            height: 100%;
         }
         
         .app-title {
@@ -415,10 +412,11 @@
     <!-- Transparent reading area (CLICK-THROUGH) -->
     <div id="transparent-area"></div>
     
-    <!-- Top control bar (NOT click-through) -->
+    <!-- Top control bar (NOT click-through, NOT draggable) -->
     <div id="top-bar">
-        <div id="drag-handle"></div>
-        <div class="app-title">📖 Reading Focus Tool</div>
+        <div id="title-area">
+            <div class="app-title">📖 Reading Focus Tool</div>
+        </div>
         <div class="window-controls">
             <button class="control-btn" onclick="toggleSettings()">⚙️ Settings</button>
             <button class="control-btn" onclick="minimizeWindow()">🗕</button>
@@ -430,7 +428,7 @@
     <div id="bottom-bar">
         <div class="footer-left">
             <div class="status-info" id="status-info">
-                Opacity: 50% | Color: Black | Height: 60px
+                Opacity: 50% | Color: Black | Reading Window Height: 60px
             </div>
         </div>
         
@@ -457,7 +455,7 @@
         
         <div class="slider-container">
             <label class="slider-label">
-                Line Height: <span id="height-value">60px</span>
+                Reading Window Height: <span id="height-value">60px</span>
             </label>
             <input type="range" id="height-slider" min="20" max="300" value="60">
         </div>
@@ -492,7 +490,7 @@
                 <strong>📋 Quick Shortcuts:</strong><br><br>
                 <span class="shortcut-key">Ctrl</span>+<span class="shortcut-key">Alt</span>+<span class="shortcut-key">↑</span>/<span class="shortcut-key">↓</span> : Opacity<br>
                 <span class="shortcut-key">Ctrl</span>+<span class="shortcut-key">Alt</span>+<span class="shortcut-key">B</span> : Black/White<br>
-                <span class="shortcut-key">Ctrl</span>+<span class="shortcut-key">Alt</span>+<span class="shortcut-key">+</span>/<span class="shortcut-key">-</span> : Height<br>
+                <span class="shortcut-key">Ctrl</span>+<span class="shortcut-key">Alt</span>+<span class="shortcut-key">+</span>/<span class="shortcut-key">-</span> : Reading Window Height<br>
                 <span class="shortcut-key">Ctrl</span>+<span class="shortcut-key">Alt</span>+<span class="shortcut-key">L</span> : Toggle Lines<br>
                 <span class="shortcut-key">Ctrl</span>+<span class="shortcut-key">Alt</span>+<span class="shortcut-key">Q</span> : Quit
             </div>
@@ -525,8 +523,8 @@
         const dashedLineBottom = document.getElementById('dashed-line-bottom')
         const statusInfo = document.getElementById('status-info')
         
-        // Click-through control - IMPROVED version
-        let clickThroughEnabled = false // Start disabled for initial interaction
+        // Click-through control
+        let clickThroughEnabled = false
         let isMouseOverControls = false
         let clickThroughTimeout = null
         
@@ -579,13 +577,11 @@
             controlElements.forEach(element => {
                 // Skip transparent area and dashed lines
                 if (element.id === 'transparent-area' || 
-                    element.classList.contains('dashed-line') ||
-                    element.id === 'transparent-area') {
+                    element.classList.contains('dashed-line')) {
                     return
                 }
                 
                 element.addEventListener('mouseenter', () => {
-                    console.log('Mouse entered control:', element.tagName, element.id || element.className)
                     isMouseOverControls = true
                     disableClickThrough()
                     
@@ -597,33 +593,26 @@
                 })
                 
                 element.addEventListener('mouseleave', (e) => {
-                    console.log('Mouse left control:', element.tagName, element.id || element.className)
-                    isMouseOverControls = false
+                    // Check if we're moving to another control element
+                    const relatedTarget = e.relatedTarget
+                    const isMovingToControl = relatedTarget && (
+                        relatedTarget.closest('#top-bar') || 
+                        relatedTarget.closest('#bottom-bar') || 
+                        relatedTarget.closest('.settings-panel')
+                    )
                     
-                    // Delay enabling click-through
-                    clickThroughTimeout = setTimeout(() => {
-                        if (!isMouseOverControls) {
+                    if (!isMovingToControl) {
+                        clickThroughTimeout = setTimeout(() => {
+                            isMouseOverControls = false
                             enableClickThrough()
-                        }
-                    }, 100)
-                })
-                
-                // Ensure click events work properly
-                element.addEventListener('mousedown', (e) => {
-                    e.stopPropagation()
-                    console.log('Control mousedown:', element.tagName)
-                })
-                
-                element.addEventListener('click', (e) => {
-                    e.stopPropagation()
-                    console.log('Control clicked:', element.tagName)
+                        }, 50)
+                    }
                 })
             })
             
             // Black overlays are also control areas
             [topOverlay, bottomOverlay].forEach(overlay => {
                 overlay.addEventListener('mouseenter', () => {
-                    console.log('Mouse entered overlay')
                     isMouseOverControls = true
                     disableClickThrough()
                     
@@ -634,7 +623,6 @@
                 })
                 
                 overlay.addEventListener('mouseleave', () => {
-                    console.log('Mouse left overlay')
                     isMouseOverControls = false
                     
                     clickThroughTimeout = setTimeout(() => {
@@ -658,10 +646,6 @@
             const topBarHeight = 40
             const initialY = (window.innerHeight / 2) + (topBarHeight / 2)
             transparentArea.style.top = initialY + 'px'
-            
-            // Make window draggable from top bar
-            const dragHandle = document.getElementById('drag-handle')
-            dragHandle.style['-webkit-app-region'] = 'drag'
             
             // Initial update of all elements
             updateTransparentArea()
@@ -687,37 +671,28 @@
             console.log('Application initialized successfully')
         }
         
-        // Update transparent area position and height
+        // Update transparent area height - OPTIMIZED for smoothness
         function updateTransparentArea() {
-            transparentArea.style.width = '100%'
-            transparentArea.style.left = '0'
+            // Directly update height without complex calculations
             transparentArea.style.height = settings.lineHeight + 'px'
         }
         
-        // Update black overlays (top and bottom)
+        // Update black overlays - OPTIMIZED for smooth height changes
         function updateBlackOverlays() {
+            // Simple calculation for overlays
             const areaRect = transparentArea.getBoundingClientRect()
-            const topBarHeight = 40
             
-            // TOP OVERLAY
-            let topHeight = areaRect.top
-            if (topHeight < topBarHeight) {
-                const newTop = topBarHeight + (settings.lineHeight / 2)
-                if (parseFloat(transparentArea.style.top) < newTop) {
-                    transparentArea.style.top = newTop + 'px'
-                }
-                topHeight = Math.max(topBarHeight, areaRect.top)
-            }
-            
-            topOverlay.style.height = Math.max(0, topHeight) + 'px'
+            // Top overlay height (from top of window to top of transparent area)
+            const topHeight = Math.max(0, areaRect.top)
+            topOverlay.style.height = topHeight + 'px'
             topOverlay.style.backgroundColor = settings.isBlack 
                 ? `rgba(0, 0, 0, ${settings.opacity})` 
                 : `rgba(255, 255, 255, ${settings.opacity})`
             
-            // BOTTOM OVERLAY
+            // Bottom overlay height (from bottom of transparent area to bottom of window)
             const bottomTop = areaRect.bottom
-            const bottomHeight = window.innerHeight - bottomTop
-            bottomOverlay.style.height = Math.max(0, bottomHeight) + 'px'
+            const bottomHeight = Math.max(0, window.innerHeight - bottomTop)
+            bottomOverlay.style.height = bottomHeight + 'px'
             bottomOverlay.style.top = bottomTop + 'px'
             bottomOverlay.style.backgroundColor = settings.isBlack 
                 ? `rgba(0, 0, 0, ${settings.opacity})` 
@@ -727,24 +702,21 @@
             updateDashedLines()
         }
         
-        // Update dashed lines position and visibility - fixed version
+        // Update dashed lines position - OPTIMIZED
         function updateDashedLines() {
-            if (!transparentArea || !dashedLineTop || !dashedLineBottom) {
+            if (!settings.showDashedLines) {
+                dashedLineTop.style.display = 'none'
+                dashedLineBottom.style.display = 'none'
                 return
             }
             
-            // Get transparent area position
             const areaRect = transparentArea.getBoundingClientRect()
             
-            // Update position
+            // Update positions
             dashedLineTop.style.top = areaRect.top + 'px'
             dashedLineBottom.style.top = areaRect.bottom + 'px'
             
-            // Ensure width
-            dashedLineTop.style.width = '100%'
-            dashedLineBottom.style.width = '100%'
-            
-            // Set color (inverse)
+            // Update colors if needed
             const lineColor = settings.isBlack 
                 ? 'rgba(255, 255, 255, 0.7)'
                 : 'rgba(0, 0, 0, 0.7)'
@@ -752,28 +724,18 @@
             dashedLineTop.style.borderBottomColor = lineColor
             dashedLineBottom.style.borderTopColor = lineColor
             
-            // Set show/hide - direct control
-            if (settings.showDashedLines) {
-                dashedLineTop.style.display = 'block'
-                dashedLineBottom.style.display = 'block'
-            } else {
-                dashedLineTop.style.display = 'none'
-                dashedLineBottom.style.display = 'none'
-            }
-            
-            console.log('Dashed lines updated. Show:', settings.showDashedLines)
+            // Show lines
+            dashedLineTop.style.display = 'block'
+            dashedLineBottom.style.display = 'block'
         }
         
         // Initialize dashed lines toggle events
         function initDashedLinesToggle() {
             const toggle = document.getElementById('dashed-lines-toggle')
             if (toggle) {
-                // Set initial state
                 toggle.checked = settings.showDashedLines
                 
-                // Add event listener
                 toggle.addEventListener('change', function(e) {
-                    console.log('Toggle switch changed:', e.target.checked)
                     settings.showDashedLines = e.target.checked
                     updateDashedLines()
                     saveSettings()
@@ -788,12 +750,9 @@
         function initSystemThemeToggle() {
             const toggle = document.getElementById('system-theme-toggle')
             if (toggle) {
-                // Set initial state
                 toggle.checked = settings.followSystemTheme
                 
-                // Add event listener
                 toggle.addEventListener('change', function(e) {
-                    console.log('System theme toggle changed:', e.target.checked)
                     settings.followSystemTheme = e.target.checked
                     updateSystemTheme()
                     saveSettings()
@@ -804,21 +763,13 @@
             }
         }
         
-        // Update dashed lines toggle display
-        function updateDashedLinesToggle() {
-            const toggle = document.getElementById('dashed-lines-toggle')
-            if (toggle) {
-                toggle.checked = settings.showDashedLines
-            }
-        }
-        
         // Update status display
         function updateStatus() {
             if (statusInfo) {
                 statusInfo.textContent = 
                     `Opacity: ${Math.round(settings.opacity * 100)}% | ` +
                     `Color: ${settings.isBlack ? 'Black' : 'White'} | ` +
-                    `Height: ${settings.lineHeight}px`
+                    `Reading Window Height: ${settings.lineHeight}px`
             }
             
             // Update slider values
@@ -837,23 +788,20 @@
         // Update color preview
         function updateColorPreview() {
             const colorPreview = document.getElementById('color-preview')
-            if (settings.isBlack) {
-                colorPreview.style.backgroundColor = `rgba(0, 0, 0, ${settings.opacity})`
-            } else {
-                colorPreview.style.backgroundColor = `rgba(255, 255, 255, ${settings.opacity})`
-            }
+            colorPreview.style.backgroundColor = settings.isBlack 
+                ? `rgba(0, 0, 0, ${settings.opacity})`
+                : `rgba(255, 255, 255, ${settings.opacity})`
         }
         
         // Mouse controls - move transparent area with mouse
         let mouseMoveTimeout = null
         
         document.addEventListener('mousemove', (e) => {
-            // Throttle: prevent too frequent updates
+            // Throttle updates for smoothness
             if (mouseMoveTimeout) return
             
             mouseMoveTimeout = setTimeout(() => {
                 const topBarHeight = 40
-                // Ensure transparent area doesn't go above top bar
                 const minY = topBarHeight + (settings.lineHeight / 2)
                 const maxY = window.innerHeight - (settings.lineHeight / 2)
                 
@@ -863,16 +811,11 @@
                 
                 transparentArea.style.top = newY + 'px'
                 
-                // Update overlays and dashed lines immediately
+                // Update overlays
                 updateBlackOverlays()
                 
                 mouseMoveTimeout = null
-            }, 10)
-        }, { passive: true })
-        
-        // Allow mouse wheel to pass through (for scrolling underlying content)
-        document.addEventListener('wheel', (e) => {
-            // Let the wheel event pass through to the underlying window
+            }, 10) // ~100fps for smooth mouse following
         }, { passive: true })
         
         // Listen for messages from main process
@@ -886,8 +829,7 @@
             updateStatus()
             updateColorPreview()
             updateSystemTheme()
-            updateDashedLinesToggle()
-            updateDashedLines() // Update dashed lines after applying settings
+            updateDashedLines()
             
             // Show/hide footer based on settings
             document.getElementById('bottom-bar').style.display = 
@@ -905,53 +847,66 @@
         })
         
         ipcRenderer.on('adjust-opacity', (event, opacity) => {
-            console.log('Adjusting opacity to:', opacity)
             settings.opacity = opacity
-            updateBlackOverlays()
+            
+            // Update overlays with new opacity
+            topOverlay.style.backgroundColor = settings.isBlack 
+                ? `rgba(0, 0, 0, ${settings.opacity})` 
+                : `rgba(255, 255, 255, ${settings.opacity})`
+            bottomOverlay.style.backgroundColor = settings.isBlack 
+                ? `rgba(0, 0, 0, ${settings.opacity})` 
+                : `rgba(255, 255, 255, ${settings.opacity})`
+            
             updateStatus()
             updateColorPreview()
             saveSettings()
         })
         
         ipcRenderer.on('toggle-color', (event, isBlack) => {
-            console.log('Toggling color to:', isBlack ? 'Black' : 'White')
             settings.isBlack = isBlack
-            updateBlackOverlays()
-            updateDashedLines() // Update dashed lines when color changes
+            
+            // Update colors
+            topOverlay.style.backgroundColor = settings.isBlack 
+                ? `rgba(0, 0, 0, ${settings.opacity})` 
+                : `rgba(255, 255, 255, ${settings.opacity})`
+            bottomOverlay.style.backgroundColor = settings.isBlack 
+                ? `rgba(0, 0, 0, ${settings.opacity})` 
+                : `rgba(255, 255, 255, ${settings.opacity})`
+            
+            updateDashedLines()
             updateStatus()
             updateColorPreview()
             saveSettings()
         })
         
         ipcRenderer.on('adjust-line-height', (event, height) => {
-            console.log('Adjusting line height to:', height)
             settings.lineHeight = height
+            
+            // Direct update for immediate response
             updateTransparentArea()
-            updateBlackOverlays() // This will automatically update dashed lines
+            updateBlackOverlays()
             updateStatus()
             saveSettings()
         })
         
-        // Dashed lines toggle handling - fixed version
+        // Dashed lines toggle handling
         ipcRenderer.on('toggle-dashed-lines', (event, showDashedLines) => {
-            console.log('Toggling dashed lines to:', showDashedLines)
             settings.showDashedLines = showDashedLines
             
             // Update toggle state
-            updateDashedLinesToggle()
+            const toggle = document.getElementById('dashed-lines-toggle')
+            if (toggle) {
+                toggle.checked = settings.showDashedLines
+            }
             
-            // Immediately update dashed lines display
+            // Update dashed lines
             updateDashedLines()
             
-            // Save settings
             saveSettings()
-            
-            console.log('Dashed lines toggled successfully')
         })
         
         // System theme change handler
         ipcRenderer.on('system-theme-changed', (event, systemTheme) => {
-            console.log('System theme changed:', systemTheme)
             settings.systemTheme = systemTheme
             
             if (settings.followSystemTheme) {
@@ -959,30 +914,18 @@
             }
         })
         
-        ipcRenderer.on('force-always-on-top', () => {
-            // Keep window always on top
-        })
-        
         // Window controls
         function minimizeWindow() {
-            console.log('Minimize button clicked')
             disableClickThrough()
-            setTimeout(() => {
-                ipcRenderer.send('window-control', 'minimize')
-            }, 10)
+            ipcRenderer.send('window-control', 'minimize')
         }
         
         function closeWindow() {
-            console.log('Close button clicked')
             disableClickThrough()
-            setTimeout(() => {
-                ipcRenderer.send('window-control', 'close')
-            }, 10)
+            ipcRenderer.send('window-control', 'close')
         }
         
-        // FIXED: Settings toggle function
         function toggleSettings() {
-            console.log('Settings button clicked')
             const panel = document.getElementById('settings-panel')
             
             if (panel.style.display === 'block') {
@@ -997,10 +940,16 @@
         }
         
         function toggleColor() {
-            console.log('Color toggle button clicked')
             settings.isBlack = !settings.isBlack
-            console.log('Local color toggle to:', settings.isBlack ? 'Black' : 'White')
-            updateBlackOverlays()
+            
+            // Update colors directly
+            topOverlay.style.backgroundColor = settings.isBlack 
+                ? `rgba(0, 0, 0, ${settings.opacity})` 
+                : `rgba(255, 255, 255, ${settings.opacity})`
+            bottomOverlay.style.backgroundColor = settings.isBlack 
+                ? `rgba(0, 0, 0, ${settings.opacity})` 
+                : `rgba(255, 255, 255, ${settings.opacity})`
+            
             updateDashedLines()
             updateStatus()
             updateColorPreview()
@@ -1009,7 +958,6 @@
         }
         
         function toggleFooter() {
-            console.log('Footer toggle button clicked')
             settings.showFooter = !settings.showFooter
             const footer = document.getElementById('bottom-bar')
             footer.style.display = settings.showFooter ? 'flex' : 'none'
@@ -1020,28 +968,69 @@
             ipcRenderer.send('update-settings', { showFooter: settings.showFooter })
         }
         
-        // Slider events
+        // Opacity slider - smooth updates
         document.getElementById('opacity-slider').addEventListener('input', (e) => {
             settings.opacity = e.target.value / 100
-            updateBlackOverlays()
+            
+            // Update overlays directly for immediate feedback
+            topOverlay.style.backgroundColor = settings.isBlack 
+                ? `rgba(0, 0, 0, ${settings.opacity})` 
+                : `rgba(255, 255, 255, ${settings.opacity})`
+            bottomOverlay.style.backgroundColor = settings.isBlack 
+                ? `rgba(0, 0, 0, ${settings.opacity})` 
+                : `rgba(255, 255, 255, ${settings.opacity})`
+            
             updateStatus()
             updateColorPreview()
             saveSettings()
             ipcRenderer.send('update-settings', { opacity: settings.opacity })
         })
         
+        // Height slider - OPTIMIZED for maximum smoothness
         document.getElementById('height-slider').addEventListener('input', (e) => {
+            // Immediate response for smoothness
             settings.lineHeight = parseInt(e.target.value)
-            updateTransparentArea()
-            updateBlackOverlays() // This will automatically update dashed lines
-            updateStatus()
-            saveSettings()
-            ipcRenderer.send('update-settings', { lineHeight: settings.lineHeight })
+            
+            // Direct DOM updates without intermediate functions
+            transparentArea.style.height = settings.lineHeight + 'px'
+            
+            // Update overlays
+            const areaRect = transparentArea.getBoundingClientRect()
+            
+            // Top overlay
+            const topHeight = Math.max(0, areaRect.top)
+            topOverlay.style.height = topHeight + 'px'
+            
+            // Bottom overlay
+            const bottomTop = areaRect.bottom
+            const bottomHeight = Math.max(0, window.innerHeight - bottomTop)
+            bottomOverlay.style.height = bottomHeight + 'px'
+            bottomOverlay.style.top = bottomTop + 'px'
+            
+            // Update dashed lines if shown
+            if (settings.showDashedLines) {
+                dashedLineTop.style.top = areaRect.top + 'px'
+                dashedLineBottom.style.top = areaRect.bottom + 'px'
+            }
+            
+            // Update status
+            document.getElementById('height-value').textContent = settings.lineHeight + 'px'
+            if (statusInfo) {
+                statusInfo.textContent = 
+                    `Opacity: ${Math.round(settings.opacity * 100)}% | ` +
+                    `Color: ${settings.isBlack ? 'Black' : 'White'} | ` +
+                    `Reading Window Height: ${settings.lineHeight}px`
+            }
+            
+            // Save asynchronously to not block UI
+            setTimeout(() => {
+                saveSettings()
+                ipcRenderer.send('update-settings', { lineHeight: settings.lineHeight })
+            }, 100)
         })
         
         // Save settings to main process
         function saveSettings() {
-            console.log('Saving settings:', settings)
             ipcRenderer.send('update-settings', settings)
         }
         
@@ -1049,24 +1038,36 @@
         window.addEventListener('resize', () => {
             document.body.style.width = window.innerWidth + 'px'
             document.body.style.height = window.innerHeight + 'px'
-            updateBlackOverlays()
+            
+            // Update overlays
+            const areaRect = transparentArea.getBoundingClientRect()
+            
+            // Top overlay
+            const topHeight = Math.max(0, areaRect.top)
+            topOverlay.style.height = topHeight + 'px'
+            
+            // Bottom overlay
+            const bottomTop = areaRect.bottom
+            const bottomHeight = Math.max(0, window.innerHeight - bottomTop)
+            bottomOverlay.style.height = bottomHeight + 'px'
+            bottomOverlay.style.top = bottomTop + 'px'
+            
+            // Update dashed lines
             updateDashedLines()
         })
         
         // Initialize when page loads
         window.addEventListener('DOMContentLoaded', initialize)
         
-        // FIXED: Close settings when clicking outside
+        // Close settings when clicking outside
         document.addEventListener('click', (e) => {
             const panel = document.getElementById('settings-panel')
             const settingsBtn = document.querySelector('[onclick="toggleSettings()"]')
             
-            // Check if click is outside settings panel and not on settings button
             if (panel.style.display === 'block' && 
                 !panel.contains(e.target) && 
                 e.target !== settingsBtn && 
                 !settingsBtn.contains(e.target)) {
-                console.log('Click outside settings, closing panel')
                 panel.style.display = 'none'
                 setTimeout(() => {
                     enableClickThrough()
@@ -1087,10 +1088,9 @@
             }
         })
         
-        // Force initial update after a short delay
+        // Force initial update
         setTimeout(() => {
             updateBlackOverlays()
-            updateDashedLines()
         }, 100)
     </script>
 </body>

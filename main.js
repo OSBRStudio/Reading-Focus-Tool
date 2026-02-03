@@ -49,7 +49,7 @@ function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay()
   const { width, height } = primaryDisplay.workAreaSize
 
-  // Create transparent window - FIXED: removed resizable option
+  // Create transparent window
   mainWindow = new BrowserWindow({
     x: 0,
     y: 0,
@@ -58,7 +58,7 @@ function createWindow() {
     transparent: true,
     frame: false,
     alwaysOnTop: true,
-    resizable: false, // Set to false as requested
+    resizable: false,
     skipTaskbar: false,
     fullscreen: false,
     focusable: true,
@@ -76,7 +76,7 @@ function createWindow() {
   mainWindow.setAlwaysOnTop(true, 'screen-saver')
   mainWindow.focus()
   
-  // Enable click-through from the start (FIXED)
+  // Enable click-through from the start
   setTimeout(() => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       console.log('Enabling click-through on startup')
@@ -183,9 +183,9 @@ function registerShortcuts() {
     saveSettings()
   })
   
-  // Ctrl+Alt+=: Increase line height
+  // Ctrl+Alt+=: Increase reading window height
   globalShortcut.register('Ctrl+Alt+=', () => {
-    console.log('Ctrl+Alt+=: Increase height')
+    console.log('Ctrl+Alt+=: Increase reading window height')
     const newHeight = Math.min(300, settings.lineHeight + 5)
     settings.lineHeight = newHeight
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -194,9 +194,9 @@ function registerShortcuts() {
     saveSettings()
   })
   
-  // Ctrl+Alt+-: Decrease line height
+  // Ctrl+Alt+-: Decrease reading window height
   globalShortcut.register('Ctrl+Alt+-', () => {
-    console.log('Ctrl+Alt+-: Decrease height')
+    console.log('Ctrl+Alt+-: Decrease reading window height')
     const newHeight = Math.max(20, settings.lineHeight - 5)
     settings.lineHeight = newHeight
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -211,12 +211,10 @@ function registerShortcuts() {
     settings.showDashedLines = !settings.showDashedLines
     
     if (mainWindow && !mainWindow.isDestroyed()) {
-      console.log('Sending toggle-dashed-lines:', settings.showDashedLines)
       mainWindow.webContents.send('toggle-dashed-lines', settings.showDashedLines)
     }
     
     saveSettings()
-    console.log('Dashed lines toggled to:', settings.showDashedLines)
   })
   
   // Ctrl+Alt+Q: Quit application
@@ -281,11 +279,10 @@ ipcMain.on('update-settings', (event, newSettings) => {
   saveSettings()
 })
 
-// Handle mouse events for click-through - FIXED version
+// Handle mouse events for click-through
 ipcMain.on('set-ignore-mouse-events', (event, ignore, options) => {
   const win = BrowserWindow.fromWebContents(event.sender)
   if (win && !win.isDestroyed()) {
-    console.log('Setting ignore mouse events to:', ignore)
     try {
       if (ignore) {
         win.setIgnoreMouseEvents(true, options || { forward: true })
@@ -302,8 +299,6 @@ ipcMain.on('set-ignore-mouse-events', (event, ignore, options) => {
 ipcMain.on('window-control', (event, action) => {
   const win = BrowserWindow.fromWebContents(event.sender)
   if (!win || win.isDestroyed()) return
-  
-  console.log('Window control:', action)
   
   switch(action) {
     case 'minimize':
@@ -336,12 +331,3 @@ if (!gotTheLock) {
     }
   })
 }
-
-// Log app events
-app.on('before-quit', () => {
-  console.log('App before-quit event')
-})
-
-app.on('quit', () => {
-  console.log('App quit event')
-})
